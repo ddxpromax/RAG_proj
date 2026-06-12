@@ -24,6 +24,18 @@ env/
 *.tmp
 tmp/
 temp/
+logs/
+
+# RAG runtime artifacts if accidentally generated inside the repository
+data/
+models/
+indexes/
+qdrant_storage/
+bm25/
+chunks/
+raw/
+normalized/
+eval/results/
 
 # OS/editor
 .DS_Store

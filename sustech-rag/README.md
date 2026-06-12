@@ -4,13 +4,13 @@ This repository implements Project 1: SUSTech Campus Knowledge Base Construction
 
 ## Storage Layout
 
-Code lives in:
+From the repository root, code lives in:
 
 ```text
-/root/RAG_proj/sustech-rag
+sustech-rag/
 ```
 
-Large runtime artifacts live in:
+In the AutoDL environment used for this project, large runtime artifacts live in:
 
 ```text
 /root/autodl-fs/sustech-rag
@@ -21,7 +21,7 @@ This keeps models, raw crawls, indexes, Qdrant storage, and logs off the 30GB sy
 ## First Commands
 
 ```bash
-cd /root/RAG_proj/sustech-rag
+cd sustech-rag
 python -m pip install -e ".[full,dev]"
 make env-check
 make init-dirs
@@ -148,6 +148,7 @@ The current data snapshot contains 285 normalized official documents: 243 HTML p
 
 ## Delivery Docs
 
+- `docs/README.md`
 - `docs/project_report.md`
 - `docs/presentation_notes.md`
 - `docs/experiment_summary.md`
