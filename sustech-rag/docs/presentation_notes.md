@@ -61,6 +61,8 @@ source registry -> crawl/PDF fetch -> parse -> chunk -> BM25/Dense index -> hybr
 2. 机器人工程培养方案最低学分，展示 PDF 检索和引用。
 3. 量子传送门预约服务，展示拒答机制。
 
+如果老师问 No-RAG 对比，可以切到 `No-RAG` 模式说明：不加 RAG 时模型只依赖参数知识，无法保证知道最新 PDF 或官方页面；加 RAG 后能展示来源、证据片段和拒答状态。
+
 ## 2. Demo Flow
 
 Open:
@@ -183,6 +185,8 @@ Suggested explanation:
 ### Q1: 为什么不用纯大模型直接回答？
 
 纯大模型可能不知道最新校园信息，也可能编造。RAG 的好处是回答前先检索官方资料，结果可追踪、可引用，也能对证据不足的问题拒答。
+
+本项目也保留了 `No-RAG` 模式作为 baseline，用来现场对比“直接问模型”和“先检索官方证据再回答”的区别。
 
 ### Q2: 为什么要同时做 BM25 和 Dense？
 

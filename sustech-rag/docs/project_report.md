@@ -126,7 +126,32 @@ Generation and refusal results on the test set with `hybrid_rerank`:
 
 The retrieval table shows that dense, BM25, and hybrid retrieval are all competitive. The small local reranker improves dev-set MRR but does not always improve test doc-level recall. This is acceptable for the project because the system exposes all modes and the evaluation honestly reports the tradeoff.
 
-## 7. Demo System
+## 7. No-RAG vs RAG Comparison
+
+The system includes a `no_rag` mode as the direct local-LLM baseline. In this mode,
+the model receives only the user question and does not retrieve official evidence.
+This is useful for demonstrating why RAG is needed, but it is not used as the
+recommended factual-answering mode.
+
+Example comparison:
+
+| question | No-RAG behavior | RAG behavior |
+| --- | --- | --- |
+| `2024级机器人工程专业本科人才培养方案的最低毕业学分要求是多少？` | The model may answer from parametric knowledge or fail because the curriculum PDF is not in its weights. | Retrieves the official PDF and returns `159学分` with citation. |
+| `南方科技大学是否提供量子传送门预约服务？` | The model may try to answer conversationally without official grounding. | Returns `insufficient_evidence` and refuses to invent an unsupported service. |
+
+The measured RAG generation/refusal evaluation shows:
+
+- citation correct rate: 0.917
+- false refusal rate: 0.000
+- refusal accuracy: 1.000
+- unanswerable refusal rate: 1.000
+
+This comparison satisfies the project requirement to show the difference between
+direct Q&A without RAG and answer generation after adding RAG. The main observed
+benefit is not only accuracy, but also traceability and safer refusal.
+
+## 8. Demo System
 
 Runtime services:
 
@@ -158,7 +183,7 @@ The Gradio UI is available at:
 http://127.0.0.1:7860
 ```
 
-## 8. Reproducibility
+## 9. Reproducibility
 
 A full rebuild can be run with:
 
@@ -179,13 +204,13 @@ python scripts/report_summary.py
 
 Embedded Qdrant uses a local file lock, so direct Python indexing/evaluation jobs should be run sequentially unless retrieval is mediated by the API service.
 
-## 9. Limitations and Future Work
+## 10. Limitations and Future Work
 
 - The corpus is large enough for the course project but still not exhaustive across every SUSTech department.
 - Some official pages contain navigation text, which can affect sparse retrieval. The evaluation generator filters obvious navigation-heavy chunks, and future work could add more aggressive boilerplate removal.
 - The final generator uses Qwen2.5-0.5B-Instruct for AutoDL resource compatibility. A larger model such as Qwen2.5-7B-Instruct could improve answer fluency if GPU memory allows.
 - The current reranker is conservative. A larger reranker or supervised calibration on a manually labeled set could improve test-set reranking.
 
-## 10. Conclusion
+## 11. Conclusion
 
 The project delivers a complete local RAG system for SUSTech campus information. It includes official-source ingestion, PDF support, reproducible indexing, multiple retrieval modes, local LLM generation, citation display, refusal handling, automated evaluation, and a working API/UI demo.
