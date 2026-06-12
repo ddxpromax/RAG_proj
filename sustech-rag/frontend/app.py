@@ -53,9 +53,9 @@ def main() -> None:
     from sustech_rag.common.config import load_paths
 
     paths = load_paths()
-    demo_path = Path(paths["data"]["eval"]) / "demo.jsonl"
     demo_questions = list(CURATED_QUESTIONS)
-    if demo_path.exists():
+    demo_path = Path(paths["data"]["eval"]) / "demo.jsonl"
+    if os.environ.get("RAG_INCLUDE_EVAL_DEMOS") == "1" and demo_path.exists():
         with demo_path.open("r", encoding="utf-8") as f:
             demo_questions.extend(json.loads(line)["question"] for line in f if line.strip())
     demo_questions = list(dict.fromkeys(demo_questions))
@@ -93,7 +93,7 @@ def main() -> None:
                     value="hybrid_rerank",
                     label="Retrieval mode",
                 )
-                use_llm = gr.Checkbox(value=True, label="Use local LLM")
+                use_llm = gr.Checkbox(value=False, label="Use local LLM")
                 submit = gr.Button("Ask")
         with gr.Tabs():
             with gr.Tab("Answer"):

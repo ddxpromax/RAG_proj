@@ -73,8 +73,13 @@ Keep settings:
 
 ```text
 Retrieval mode: Hybrid + Rerank
-Use local LLM: checked
+Use local LLM: unchecked for the main demo
 ```
+
+Use the extractive mode for the first pass because it quotes the retrieved evidence
+directly and is safest for exact facts. If you want to show natural generation,
+enable `Use local LLM` only for the PDF curriculum question after the cited evidence
+has already been shown.
 
 ### Demo 1: Library
 
@@ -116,6 +121,12 @@ What to show:
 Suggested explanation:
 
 这个问题来自 PDF 培养方案。项目不需要手动上传 PDF，脚本会从公开目录发现和下载 PDF，然后解析、切块、建立索引。
+
+Optional LLM generation line:
+
+```text
+如果勾选 Use local LLM，本地 Qwen2.5-0.5B 会把证据整理成自然语言回答；这个问题已验证会回答 159 学分。
+```
 
 ### Demo 3: Student Affairs
 

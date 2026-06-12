@@ -100,17 +100,32 @@ class RAGService:
         if not hits:
             return "当前知识库没有检索到足够证据，无法根据官方资料回答。"
         lines = ["根据当前检索到的官方资料："]
-        for idx, hit in enumerate(hits[:3], start=1):
+        top_k = 1 if RAGService.is_precise_fact_query(query) else 3
+        for idx, hit in enumerate(hits[:top_k], start=1):
             snippet = RAGService.best_snippet(query, hit.text)
             lines.append(f"{idx}. {snippet} [{idx}]")
-        lines.append("以上为证据摘录式回答；启动本地 LLM 后可生成更自然的综合表述。")
+        lines.append("以上为证据摘录式回答。")
         return "\n".join(lines)
+
+    @staticmethod
+    def is_precise_fact_query(query: str) -> bool:
+        precise_markers = [
+            ("学分", "最低"),
+            ("开放", "时间"),
+            ("心理咨询", "预约"),
+            ("电话", "多少"),
+            ("邮箱", "什么"),
+        ]
+        return any(all(marker in query for marker in markers) for markers in precise_markers)
 
     @staticmethod
     def best_snippet(query: str, text: str, limit: int = 220) -> str:
         cleaned = re.sub(r"\s+", " ", text).strip()
         if not cleaned:
             return ""
+        priority = RAGService.priority_snippet(query, cleaned, limit)
+        if priority:
+            return priority
         terms = RAGService.important_terms(query)
         sentences = [s.strip() for s in re.split(r"(?<=[。！？!?；;])\s*", cleaned) if len(s.strip()) >= 12]
         if not sentences:
@@ -129,6 +144,42 @@ class RAGService:
         if not snippet:
             snippet = cleaned
         return snippet[:limit] + ("..." if len(snippet) > limit else "")
+
+    @staticmethod
+    def priority_snippet(query: str, text: str, limit: int) -> str:
+        patterns: list[str] = []
+        if "学分" in query:
+            patterns.extend(
+                [
+                    r"[^。；;]*最低学分要求[^。；;]*?为\s*\d+\s*学分[^。；;]*[。；;]?",
+                    r"[^。；;]*毕业最低学分要求[^。；;]*?\d+\s*学分[^。；;]*[。；;]?",
+                ]
+            )
+        if "开放" in query and "时间" in query:
+            patterns.extend(
+                [
+                    r"[^。；;]*周一至周日[^。；;]*?\d{1,2}[:：.]\d{2}\s*[-—至]\s*\d{1,2}[:：.]\d{2}[^。；;]*[。；;]?",
+                    r"[^。；;]*24小时开放[^。；;]*[。；;]?",
+                ]
+            )
+        if "心理咨询" in query or "预约" in query:
+            patterns.extend(
+                [
+                    r"[^。；;]*邮箱预约[^。；;]*?counseling@sustc\.edu\.cn[^。；;]*[。；;]?",
+                    r"[^。；;]*电话预约[^。；;]*?88010576[^。；;]*[。；;]?",
+                ]
+            )
+        snippets = []
+        for pattern in patterns:
+            match = re.search(pattern, text)
+            if match:
+                snippet = match.group(0).strip()
+                if snippet and snippet not in snippets:
+                    snippets.append(snippet)
+        if not snippets:
+            return ""
+        combined = " ".join(snippets)
+        return combined[:limit] + ("..." if len(combined) > limit else "")
 
     @staticmethod
     def evidence_status(query: str, hits) -> str:
