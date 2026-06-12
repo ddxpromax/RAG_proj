@@ -1,0 +1,35 @@
+# Python/runtime cache
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.ruff_cache/
+.mypy_cache/
+
+# Packaging/build outputs
+*.egg-info/
+build/
+dist/
+
+# Local environments
+.venv/
+venv/
+env/
+.env
+.env.*
+!.env.example
+!**/.env.example
+
+# Logs and temporary files
+*.log
+*.tmp
+tmp/
+temp/
+
+# OS/editor
+.DS_Store
+.idea/
+.vscode/
+
+# Large runtime artifacts are intentionally stored outside this repo:
+# /root/autodl-fs/sustech-rag
+# /root/autodl-tmp/sustech-rag

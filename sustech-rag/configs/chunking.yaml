@@ -1,0 +1,29 @@
+default:
+  target_chars_min: 300
+  target_chars_max: 600
+  overlap_chars: 70
+
+rules:
+  web:
+    heading_levels: [1, 2, 3]
+    target_chars_min: 300
+    target_chars_max: 600
+    overlap_chars: 70
+  regulation:
+    target_chars_min: 200
+    target_chars_max: 700
+    semantic_overlap: true
+  curriculum_pdf:
+    target_chars_min: 180
+    target_chars_max: 700
+    keep_table_rows: true
+    heading_prefix: true
+  faq:
+    one_qa_per_chunk: true
+    overlap_chars: 0
+  long_guide:
+    child_chars_min: 250
+    child_chars_max: 450
+    parent_chars_min: 800
+    parent_chars_max: 1500
+

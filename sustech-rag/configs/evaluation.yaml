@@ -1,0 +1,31 @@
+dev_size: 15
+test_size: 60
+demo_size: 10
+
+retrieval_metrics:
+  - document_hit_at_5
+  - document_hit_at_10
+  - chunk_hit_at_5
+  - chunk_hit_at_10
+  - mrr_at_10
+
+generation_metrics:
+  - answer_correctness
+  - faithfulness
+  - citation_correctness
+  - refusal_accuracy
+
+experiment_matrix:
+  - id: A
+    name: no_rag
+  - id: B
+    name: dense
+  - id: C
+    name: bm25
+  - id: D
+    name: hybrid
+  - id: E
+    name: hybrid_rerank
+  - id: F
+    name: hybrid_rerank_query_decomposition
+

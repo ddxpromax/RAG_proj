@@ -1,0 +1,42 @@
+download_priority: [local, modelscope, huggingface]
+
+generator:
+  backend: auto
+  served_model_name: sustech-rag-llm
+  provider: modelscope
+  model_id: Qwen/Qwen2.5-0.5B-Instruct
+  target_model_id: Qwen/Qwen2.5-7B-Instruct
+  local_path: /root/autodl-fs/sustech-rag/models/generator
+  quantization: awq
+  max_model_len: 8192
+  dtype: half
+  gpu_memory_utilization: 0.82
+  api_base: http://127.0.0.1:8000/v1
+  api_key: EMPTY
+  temperature: 0.1
+  max_tokens: 800
+
+embedding:
+  backend: sentence_transformers
+  provider: modelscope
+  model_id: Qwen/Qwen3-Embedding-0.6B
+  target_model_id: Qwen/Qwen3-Embedding-0.6B
+  fallback_model_id: BAAI/bge-m3
+  local_path: /root/autodl-fs/sustech-rag/models/embedding
+  hashing_dimension: 768
+  max_length: 1024
+  query_prompt_name: query
+  batch_size: 16
+  normalize: true
+
+reranker:
+  backend: qwen_causal
+  provider: modelscope
+  model_id: Qwen/Qwen3-Reranker-0.6B
+  fallback_model_id: BAAI/bge-reranker-v2-m3
+  local_path: /root/autodl-fs/sustech-rag/models/reranker
+  batch_size: 8
+  max_length: 2048
+  qwen_score_weight: 0.25
+  instruction: Given a web search query, retrieve relevant passages that answer the query
+  device: auto

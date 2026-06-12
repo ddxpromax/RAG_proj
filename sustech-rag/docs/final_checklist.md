@@ -1,0 +1,24 @@
+# Final Checklist
+
+- [x] Source registry and official source ingestion
+- [x] Public PDF discovery and ingestion
+- [x] Raw manifest and normalized documents
+- [x] Chunk generation
+- [x] BM25 index
+- [x] Dense local Qdrant index
+- [x] Hybrid RRF retrieval
+- [x] Reranker fallback
+- [x] Evidence sufficiency and refusal handling
+- [x] FastAPI backend
+- [x] Gradio frontend
+- [x] Dev/test/demo evaluation sets
+- [x] Retrieval metrics
+- [x] Generation/refusal metrics
+- [x] Demo script
+- [x] Report outline
+- [x] Final project report draft
+- [x] Presentation notes and Q&A prep
+- [x] Local OpenAI-compatible generation service fallback
+- [x] Download and run final local LLM weights for fully natural generation
+- [x] Replace hashing embedding with Qwen3-Embedding-0.6B
+- [x] Replace lexical reranker with Qwen3-Reranker-0.6B blended reranking

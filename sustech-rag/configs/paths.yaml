@@ -1,0 +1,24 @@
+project_root: /root/RAG_proj/sustech-rag
+storage_root: /root/autodl-fs/sustech-rag
+
+data:
+  raw_html: ${storage_root}/data/raw/html
+  raw_pdf: ${storage_root}/data/raw/pdf
+  parsed: ${storage_root}/data/parsed
+  normalized: ${storage_root}/data/normalized
+  chunks: ${storage_root}/data/chunks
+  manifests: ${storage_root}/data/manifests
+  eval: ${storage_root}/data/eval
+
+models:
+  root: ${storage_root}/models
+  hf_home: ${storage_root}/models/hf-cache
+  modelscope_cache: ${storage_root}/models/modelscope-cache
+
+indexes:
+  bm25: ${storage_root}/indexes/bm25
+  qdrant_storage: ${storage_root}/qdrant_storage
+
+logs: ${storage_root}/logs
+cache: ${storage_root}/cache
+
