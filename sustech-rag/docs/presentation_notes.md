@@ -59,6 +59,7 @@ source registry -> crawl/PDF fetch -> parse -> chunk -> BM25/Dense index -> hybr
 - Dense 的 doc hit 更高，说明语义召回更容易找到正确文档。
 - Hybrid 的 MRR 最好，说明二者融合后排序更稳。
 - 当前 0.6B reranker 比较保守，没有在 test 集显著提升 doc@5，所以报告如实保留了这个 tradeoff。
+- reranker 权重消融显示，越依赖 Qwen reranker，chunk 命中略有提升，但 MRR 会下降；所以最终采用“Qwen 分数 + 原 hybrid rank prior”的保守融合。
 
 ### Demo Transition
 
@@ -204,6 +205,8 @@ BM25 对关键词、年份、专业名称这类精确匹配很强；Dense 对语
 当前 reranker 是 0.6B 小模型，并且数据集较小、问题类型较混合。它在 dev 集 MRR 有提升，但 test 集 doc@5 略降。项目保留所有模式并如实报告这个 tradeoff，说明系统评估不是只挑最好看的数字。
 
 从消融看，Hybrid 本身已经很强，reranker 主要保持 doc@10 和 chunk 命中，没有稳定带来前 5 位收益。后续可以用更大的 reranker 或人工标注数据做校准。
+
+权重消融进一步说明：Qwen-only rerank 的 doc@10 可以到 0.983，但 MRR 降到 0.825，说明它能找到相关文档，却不一定把最合适证据排在最前。
 
 ### Q4: 为什么选择 Qwen2.5-0.5B 作为生成模型？
 

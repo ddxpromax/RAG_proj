@@ -15,6 +15,7 @@ from sustech_rag.common.config import PROJECT_ROOT, load_paths
 
 
 RETRIEVAL_MODES = ["bm25", "dense", "hybrid", "hybrid_rerank"]
+RERANKER_WEIGHTS = [0.0, 0.25, 0.5, 0.75, 1.0]
 
 
 def load_cases(split: str) -> list[dict[str, Any]]:
@@ -36,6 +37,26 @@ def hit_at(hits: list[dict], relevant_chunks: set[str], relevant_docs: set[str],
         if level == "doc" and hit.get("doc_id") in relevant_docs:
             return 1
     return 0
+
+
+def deduplicate_hits(hits: list[dict], per_doc_limit: int = 3) -> list[dict]:
+    doc_counts: dict[str, int] = {}
+    text_hashes: set[str] = set()
+    kept: list[dict] = []
+    for hit in hits:
+        snippet_key = str(hit.get("text") or "")[:180]
+        if snippet_key in text_hashes:
+            continue
+        doc_id = str(hit.get("doc_id") or "")
+        if doc_counts.get(doc_id, 0) >= per_doc_limit:
+            continue
+        copied = dict(hit)
+        text_hashes.add(snippet_key)
+        doc_counts[doc_id] = doc_counts.get(doc_id, 0) + 1
+        kept.append(copied)
+    for rank, hit in enumerate(kept, start=1):
+        hit["rank"] = rank
+    return kept
 
 
 def score_generation_case(case: dict[str, Any], response: dict[str, Any]) -> dict[str, Any]:
@@ -142,6 +163,73 @@ def evaluate_generation(
     }
 
 
+def rerank_with_weight(hits: list[dict], weight: float) -> list[dict]:
+    reranked = []
+    for hit in hits:
+        metadata = hit.get("metadata") or {}
+        if "qwen_rerank_score" not in metadata or "rank_prior_score" not in metadata:
+            continue
+        copied = dict(hit)
+        copied["metadata"] = dict(metadata)
+        copied["score"] = weight * float(metadata["qwen_rerank_score"]) + (1.0 - weight) * float(metadata["rank_prior_score"])
+        reranked.append(copied)
+    reranked.sort(key=lambda item: item.get("score", 0.0), reverse=True)
+    return deduplicate_hits(reranked)
+
+
+def evaluate_reranker_weights(
+    client: httpx.Client,
+    api_base: str,
+    cases: list[dict[str, Any]],
+    split: str,
+    weights: list[float],
+) -> list[dict[str, Any]]:
+    answerable_cases = [case for case in cases if case.get("answerable", True)]
+    totals_by_weight = {
+        weight: {
+            "doc_hit_at_5": 0,
+            "doc_hit_at_10": 0,
+            "chunk_hit_at_5": 0,
+            "chunk_hit_at_10": 0,
+            "mrr_at_10": 0.0,
+        }
+        for weight in weights
+    }
+    for case in answerable_cases:
+        response = client.post(
+            f"{api_base}/retrieve",
+            json={"question": case["question"], "mode": "hybrid_rerank", "context_top_k": 10},
+        )
+        response.raise_for_status()
+        payload = response.json()
+        candidates = payload.get("trace", {}).get("rerank") or []
+        relevant_chunks = set(case.get("relevant_chunk_ids") or [])
+        relevant_docs = set(case.get("relevant_doc_ids") or [])
+        for weight in weights:
+            hits = rerank_with_weight(candidates, weight)[:10]
+            totals = totals_by_weight[weight]
+            totals["doc_hit_at_5"] += hit_at(hits, relevant_chunks, relevant_docs, 5, "doc")
+            totals["doc_hit_at_10"] += hit_at(hits, relevant_chunks, relevant_docs, 10, "doc")
+            totals["chunk_hit_at_5"] += hit_at(hits, relevant_chunks, relevant_docs, 5, "chunk")
+            totals["chunk_hit_at_10"] += hit_at(hits, relevant_chunks, relevant_docs, 10, "chunk")
+            totals["mrr_at_10"] += reciprocal_rank(hits, relevant_chunks, relevant_docs)
+    n = max(1, len(answerable_cases))
+    return [
+        {
+            "split": split,
+            "experiment": f"reranker_weight_{weight:g}",
+            "qwen_score_weight": weight,
+            "answerable": n,
+            "doc_hit_at_5": totals["doc_hit_at_5"] / n,
+            "doc_hit_at_10": totals["doc_hit_at_10"] / n,
+            "chunk_hit_at_5": totals["chunk_hit_at_5"] / n,
+            "chunk_hit_at_10": totals["chunk_hit_at_10"] / n,
+            "mrr_at_10": totals["mrr_at_10"] / n,
+        }
+        for weight, totals in totals_by_weight.items()
+    ]
+
+
 def load_cached_llm_summary(split: str, mode: str) -> dict[str, Any] | None:
     path = Path(load_paths()["data"]["eval"]) / "results" / f"{split}_generation_{mode}_summary.json"
     if not path.exists():
@@ -183,7 +271,11 @@ def markdown_table(rows: list[dict[str, Any]], columns: list[str]) -> str:
     return "\n".join(lines)
 
 
-def write_report(retrieval_rows: list[dict[str, Any]], generation_rows: list[dict[str, Any]]) -> Path:
+def write_report(
+    retrieval_rows: list[dict[str, Any]],
+    generation_rows: list[dict[str, Any]],
+    reranker_weight_rows: list[dict[str, Any]],
+) -> Path:
     out = PROJECT_ROOT / "docs" / "ablation_report.md"
     lines = [
         "# Ablation Report",
@@ -195,6 +287,15 @@ def write_report(retrieval_rows: list[dict[str, Any]], generation_rows: list[dic
         markdown_table(
             retrieval_rows,
             ["experiment", "doc_hit_at_5", "doc_hit_at_10", "chunk_hit_at_5", "chunk_hit_at_10", "mrr_at_10"],
+        ),
+        "",
+        "## Reranker Blend-Weight Ablation",
+        "",
+        "The Qwen reranker score is blended with the original hybrid rank prior. This ablation reuses the same traced reranker candidates and recalculates the final ranking for different weights, without changing the production API configuration.",
+        "",
+        markdown_table(
+            reranker_weight_rows,
+            ["experiment", "qwen_score_weight", "doc_hit_at_5", "doc_hit_at_10", "chunk_hit_at_5", "chunk_hit_at_10", "mrr_at_10"],
         ),
         "",
         "## Generation / Refusal Ablation",
@@ -214,6 +315,7 @@ def write_report(retrieval_rows: list[dict[str, Any]], generation_rows: list[dic
         "## Notes",
         "",
         "- Retrieval ablation compares sparse, dense, hybrid fusion, and hybrid plus reranking.",
+        "- Reranker blend-weight ablation checks how strongly to trust the Qwen yes/no reranker score relative to the original hybrid rank prior.",
         "- Generation ablation compares evidence-extractive answering with the cached local-LLM generation evaluation when available.",
         "- Evidence sufficiency remains enabled in all generation rows, because it is part of the safety-critical RAG answer path.",
     ]
@@ -235,6 +337,7 @@ def main() -> None:
         health = client.get(f"{api_base}/health")
         health.raise_for_status()
         retrieval_rows = evaluate_retrieval(client, api_base, cases, args.split, RETRIEVAL_MODES)
+        reranker_weight_rows = evaluate_reranker_weights(client, api_base, cases, args.split, RERANKER_WEIGHTS)
         generation_rows = [
             evaluate_generation(
                 client,
@@ -264,11 +367,14 @@ def main() -> None:
                 generation_rows.append(cached)
 
     retrieval_path = out_dir / f"{args.split}_ablation_retrieval.csv"
+    reranker_weight_path = out_dir / f"{args.split}_ablation_reranker_weights.csv"
     generation_path = out_dir / f"{args.split}_ablation_generation.csv"
     write_csv(retrieval_path, retrieval_rows)
+    write_csv(reranker_weight_path, reranker_weight_rows)
     write_csv(generation_path, generation_rows)
-    report_path = write_report(retrieval_rows, generation_rows)
+    report_path = write_report(retrieval_rows, generation_rows, reranker_weight_rows)
     print(retrieval_path)
+    print(reranker_weight_path)
     print(generation_path)
     print(report_path)
 

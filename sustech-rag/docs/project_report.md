@@ -159,6 +159,7 @@ Observations:
 - Dense retrieval has the strongest document-level recall, while BM25 performs best on exact chunk-level matches.
 - Hybrid fusion gives the best MRR in this test set, showing that lexical and semantic retrieval are complementary.
 - The small Qwen3 reranker is conservative: it preserves doc@10 but does not improve doc@5 on this corpus.
+- Reranker blend-weight ablation shows a tradeoff. Higher Qwen score weights improve chunk-level hit rate slightly, but reduce MRR; a Qwen-only reranker reaches `doc_hit@10=0.983` but drops MRR to `0.825`. The production configuration therefore keeps reranking blended with the original hybrid rank prior.
 - Extractive answering and local LLM generation share the same evidence gate, so refusal metrics remain stable. For live demos, extractive mode is safer for exact facts, while the local LLM can be shown as a natural-language generation option.
 
 ## 8. No-RAG vs RAG Comparison
