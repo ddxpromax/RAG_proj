@@ -44,18 +44,19 @@ export no_proxy=localhost,127.0.0.1,0.0.0.0
    - 2024级机器人工程专业本科人才培养方案的最低毕业学分要求是多少？
    - Expected: cites `12-2024级机器人工程专业本科人才培养方案.pdf`.
    - Optional: enable `Use local LLM` on this question to show natural generation. The verified answer is `159学分`.
-4. Ask a student-affairs service question:
+4. Ask an unanswerable question:
+   - 南方科技大学是否提供量子传送门预约服务？
+   - Expected: refuses due to insufficient official evidence.
+5. Optional: ask a student-affairs service question:
    - 南方科技大学心理咨询怎么预约？
-   - Expected: retrieves Student Affairs mental-health counseling information and shows source cards.
-5. Switch retrieval modes:
+   - Expected under `Hybrid + Rerank`: retrieves Student Affairs mental-health counseling information and returns `counseling@sustc.edu.cn`, `88010576`, and `荔园9栋一层105`.
+   - Do not use this question for standalone Dense-mode demonstration; Dense can retrieve a less relevant Teaching Affairs contact page for this query.
+6. Optional: switch retrieval modes:
    - `bm25`
    - `dense`
    - `hybrid`
    - `hybrid_rerank`
    Show the trace section and explain Dense/BM25/RRF/Rerank.
-6. Ask an unanswerable question:
-   - 南方科技大学是否提供量子传送门预约服务？
-   - Expected: refuses due to insufficient official evidence.
 7. Show `docs/experiment_summary.md` retrieval and refusal metrics.
 
 ## Current Model Note
