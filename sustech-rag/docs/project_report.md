@@ -126,7 +126,42 @@ Generation and refusal results on the test set with `hybrid_rerank`:
 
 The retrieval table shows that dense, BM25, and hybrid retrieval are all competitive. The small local reranker improves dev-set MRR but does not always improve test doc-level recall. This is acceptable for the project because the system exposes all modes and the evaluation honestly reports the tradeoff.
 
-## 7. No-RAG vs RAG Comparison
+## 7. Ablation Analysis
+
+The project includes an additional ablation script:
+
+```bash
+python scripts/run_ablations.py --split test
+```
+
+It evaluates retrieval and generation variants on the same fixed corpus and indexes,
+without rebuilding data or changing the production demo configuration. The generated
+report is `docs/ablation_report.md`.
+
+Retrieval ablation:
+
+| experiment | doc_hit@5 | doc_hit@10 | chunk_hit@5 | chunk_hit@10 | MRR@10 |
+| --- | ---: | ---: | ---: | ---: | ---: |
+| BM25 | 0.933 | 0.967 | 0.883 | 0.883 | 0.871 |
+| Dense | 0.983 | 0.983 | 0.800 | 0.817 | 0.873 |
+| Hybrid | 0.967 | 0.967 | 0.817 | 0.817 | 0.877 |
+| Hybrid + Rerank | 0.917 | 0.967 | 0.817 | 0.817 | 0.876 |
+
+Generation/refusal ablation:
+
+| experiment | citation correct | false refusal | refusal accuracy | unanswerable refusal |
+| --- | ---: | ---: | ---: | ---: |
+| Hybrid + Rerank + extractive answer | 0.917 | 0.000 | 1.000 | 1.000 |
+| Hybrid + Rerank + local LLM | 0.917 | 0.000 | 1.000 | 1.000 |
+
+Observations:
+
+- Dense retrieval has the strongest document-level recall, while BM25 performs best on exact chunk-level matches.
+- Hybrid fusion gives the best MRR in this test set, showing that lexical and semantic retrieval are complementary.
+- The small Qwen3 reranker is conservative: it preserves doc@10 but does not improve doc@5 on this corpus.
+- Extractive answering and local LLM generation share the same evidence gate, so refusal metrics remain stable. For live demos, extractive mode is safer for exact facts, while the local LLM can be shown as a natural-language generation option.
+
+## 8. No-RAG vs RAG Comparison
 
 The system includes a `no_rag` mode as the direct local-LLM baseline. In this mode,
 the model receives only the user question and does not retrieve official evidence.
@@ -151,7 +186,7 @@ This comparison satisfies the project requirement to show the difference between
 direct Q&A without RAG and answer generation after adding RAG. The main observed
 benefit is not only accuracy, but also traceability and safer refusal.
 
-## 8. Demo System
+## 9. Demo System
 
 Runtime services:
 
@@ -183,7 +218,7 @@ The Gradio UI is available at:
 http://127.0.0.1:7860
 ```
 
-## 9. Reproducibility
+## 10. Reproducibility
 
 A full rebuild can be run with:
 
@@ -199,18 +234,20 @@ python scripts/generate_eval.py
 python scripts/evaluate.py --split dev
 python scripts/evaluate.py --split test
 python scripts/evaluate_generation.py --split test --mode hybrid_rerank --use-llm
+python scripts/run_ablations.py --split test
 python scripts/report_summary.py
 ```
 
 Embedded Qdrant uses a local file lock, so direct Python indexing/evaluation jobs should be run sequentially unless retrieval is mediated by the API service.
 
-## 10. Limitations and Future Work
+## 11. Limitations and Future Work
 
 - The corpus is large enough for the course project but still not exhaustive across every SUSTech department.
 - Some official pages contain navigation text, which can affect sparse retrieval. The evaluation generator filters obvious navigation-heavy chunks, and future work could add more aggressive boilerplate removal.
 - The final generator uses Qwen2.5-0.5B-Instruct for AutoDL resource compatibility. A larger model such as Qwen2.5-7B-Instruct could improve answer fluency if GPU memory allows.
 - The current reranker is conservative. A larger reranker or supervised calibration on a manually labeled set could improve test-set reranking.
+- Future retrieval experiments can add parent-child chunk retrieval or parent expansion for long PDF tables and policies.
 
-## 11. Conclusion
+## 12. Conclusion
 
 The project delivers a complete local RAG system for SUSTech campus information. It includes official-source ingestion, PDF support, reproducible indexing, multiple retrieval modes, local LLM generation, citation display, refusal handling, automated evaluation, and a working API/UI demo.

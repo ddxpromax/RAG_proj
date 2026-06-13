@@ -20,6 +20,7 @@ class ChatRequest(BaseModel):
 class RetrieveRequest(BaseModel):
     question: str
     mode: str = "bm25"
+    context_top_k: int | None = None
 
 
 @app.get("/health")
@@ -29,7 +30,7 @@ def health() -> dict:
 
 @app.post("/retrieve")
 def retrieve(req: RetrieveRequest) -> dict:
-    result = retrieval_service.retrieve(req.question, req.mode)
+    result = retrieval_service.retrieve(req.question, req.mode, context_top_k=req.context_top_k)
     return {
         "hits": [hit.model_dump(mode="json") for hit in result["hits"]],
         "trace": result["trace"],

@@ -53,6 +53,13 @@ source registry -> crawl/PDF fetch -> parse -> chunk -> BM25/Dense index -> hybr
 
 这说明系统能比较稳定地找到官方证据，并且对不可回答问题保持拒答。
 
+此外我补充做了消融实验：
+
+- BM25 的 chunk hit 更高，说明精确词匹配对学分、邮箱、电话这类事实很有效。
+- Dense 的 doc hit 更高，说明语义召回更容易找到正确文档。
+- Hybrid 的 MRR 最好，说明二者融合后排序更稳。
+- 当前 0.6B reranker 比较保守，没有在 test 集显著提升 doc@5，所以报告如实保留了这个 tradeoff。
+
 ### Demo Transition
 
 接下来我展示三个问题：
@@ -195,6 +202,8 @@ BM25 对关键词、年份、专业名称这类精确匹配很强；Dense 对语
 ### Q3: 为什么 reranker 没有让所有 test 指标都提升？
 
 当前 reranker 是 0.6B 小模型，并且数据集较小、问题类型较混合。它在 dev 集 MRR 有提升，但 test 集 doc@5 略降。项目保留所有模式并如实报告这个 tradeoff，说明系统评估不是只挑最好看的数字。
+
+从消融看，Hybrid 本身已经很强，reranker 主要保持 doc@10 和 chunk 命中，没有稳定带来前 5 位收益。后续可以用更大的 reranker 或人工标注数据做校准。
 
 ### Q4: 为什么选择 Qwen2.5-0.5B 作为生成模型？
 

@@ -90,6 +90,7 @@ python scripts/generate_eval.py
 python scripts/evaluate.py --split dev
 python scripts/evaluate.py --split test
 python scripts/evaluate_generation.py --split test --mode hybrid_rerank --use-llm
+python scripts/run_ablations.py --split test
 ```
 
 For the full system, build dense embeddings, start the local generation service, then run the API and Gradio UI. Docker is not required in the current AutoDL environment because Qdrant uses local embedded storage.
@@ -152,6 +153,7 @@ The current data snapshot contains 285 normalized official documents: 243 HTML p
 - `docs/project_report.md`
 - `docs/presentation_notes.md`
 - `docs/experiment_summary.md`
+- `docs/ablation_report.md`
 - `docs/demo_script.md`
 - `docs/project_report_outline.md`
 - `docs/operations.md`

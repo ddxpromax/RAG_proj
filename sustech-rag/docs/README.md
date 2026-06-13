@@ -6,6 +6,7 @@ Use these files for submission, defense, and reproduction:
 | --- | --- |
 | `project_report.md` | final project report draft |
 | `experiment_summary.md` | data snapshot and evaluation metrics |
+| `ablation_report.md` | retrieval and generation ablation results |
 | `demo_script.md` | live demo sequence and expected behavior |
 | `presentation_notes.md` | five-minute talk track and Q&A prep |
 | `operations.md` | rebuild, evaluation, and service commands |
