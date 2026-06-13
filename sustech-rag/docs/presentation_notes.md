@@ -176,6 +176,8 @@ Suggested explanation:
 
 ## 3. Key Numbers to Memorize
 
+For slide-ready tables, use `docs/presentation_tables.md`.
+
 | item | value |
 | --- | ---: |
 | documents | 285 |
