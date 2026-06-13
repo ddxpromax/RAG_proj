@@ -152,6 +152,7 @@ The current data snapshot contains 285 normalized official documents: 243 HTML p
 - `docs/README.md`
 - `docs/project_report.md`
 - `docs/presentation_notes.md`
+- `docs/defense_full_script.md`
 - `docs/experiment_summary.md`
 - `docs/ablation_report.md`
 - `docs/presentation_tables.md`
