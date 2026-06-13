@@ -60,6 +60,7 @@ source registry -> crawl/PDF fetch -> parse -> chunk -> BM25/Dense index -> hybr
 - Hybrid 的 MRR 最好，说明二者融合后排序更稳。
 - 当前 0.6B reranker 比较保守，没有在 test 集显著提升 doc@5，所以报告如实保留了这个 tradeoff。
 - reranker 权重消融显示，越依赖 Qwen reranker，chunk 命中略有提升，但 MRR 会下降；所以最终采用“Qwen 分数 + 原 hybrid rank prior”的保守融合。
+- evidence gate 消融显示，如果强制回答、不做证据充足性判断，不可回答题拒答率会从 1.0 掉到 0，所以拒答门控是必要的。
 
 ### Demo Transition
 
@@ -219,6 +220,8 @@ BM25 对关键词、年份、专业名称这类精确匹配很强；Dense 对语
 ### Q6: 怎么判断应该拒答？
 
 系统会检查检索证据是否覆盖问题中的关键限定，例如年份、校区名、专业名等。对于明显不存在或资料不支持的问题，返回 `insufficient_evidence`，避免模型自由发挥。
+
+消融结果也支持这个设计：关闭 evidence gate 并强制回答时，不可回答问题的拒答率从 1.0 下降到 0，说明仅有检索结果不等于证据足够。
 
 ### Q7: 为什么前端不直接读取索引？
 

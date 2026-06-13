@@ -163,6 +163,63 @@ def evaluate_generation(
     }
 
 
+def evaluate_evidence_gate(
+    client: httpx.Client,
+    api_base: str,
+    cases: list[dict[str, Any]],
+    split: str,
+    mode: str = "hybrid_rerank",
+) -> list[dict[str, Any]]:
+    gate_on = evaluate_generation(
+        client,
+        api_base,
+        cases,
+        split,
+        mode=mode,
+        use_llm=False,
+        experiment="evidence_gate_on_extractive",
+    )
+    forced_rows = []
+    for case in cases:
+        response = client.post(
+            f"{api_base}/retrieve",
+            json={"question": case["question"], "mode": mode, "context_top_k": 5},
+        )
+        response.raise_for_status()
+        hits = response.json()["hits"]
+        forced_response = {
+            "answer": "FORCED_ANSWER_WITHOUT_EVIDENCE_GATE",
+            "evidence_status": "supported" if hits else "insufficient_evidence",
+            "citations": [
+                {
+                    "doc_id": hit.get("doc_id"),
+                    "chunk_id": hit.get("chunk_id"),
+                    "title": hit.get("title"),
+                    "url": hit.get("url"),
+                }
+                for hit in hits
+            ],
+        }
+        row = score_generation_case(case, forced_response)
+        row["question"] = case["question"]
+        row["experiment"] = "force_answer_no_gate"
+        forced_rows.append(row)
+    answerable_rows = [row for row in forced_rows if row["answerable"]]
+    unanswerable_rows = [row for row in forced_rows if not row["answerable"]]
+    gate_off = {
+        "split": split,
+        "experiment": "force_answer_no_gate",
+        "mode": mode,
+        "use_llm": False,
+        "cases": len(forced_rows),
+        "citation_correct_rate": sum(row["citation_correct"] for row in answerable_rows) / max(1, len(answerable_rows)),
+        "false_refusal_rate": sum(row["refused"] for row in answerable_rows) / max(1, len(answerable_rows)),
+        "refusal_accuracy": sum(row["refusal_correct"] for row in forced_rows) / max(1, len(forced_rows)),
+        "unanswerable_refusal_rate": sum(row["refused"] for row in unanswerable_rows) / max(1, len(unanswerable_rows)),
+    }
+    return [gate_on, gate_off]
+
+
 def rerank_with_weight(hits: list[dict], weight: float) -> list[dict]:
     reranked = []
     for hit in hits:
@@ -275,6 +332,7 @@ def write_report(
     retrieval_rows: list[dict[str, Any]],
     generation_rows: list[dict[str, Any]],
     reranker_weight_rows: list[dict[str, Any]],
+    evidence_gate_rows: list[dict[str, Any]],
 ) -> Path:
     out = PROJECT_ROOT / "docs" / "ablation_report.md"
     lines = [
@@ -312,12 +370,27 @@ def write_report(
             ],
         ),
         "",
+        "## Evidence Gate Ablation",
+        "",
+        "This ablation compares the normal answer path with a simulated force-answer path that bypasses evidence sufficiency. The force-answer row is intentionally not a production mode; it estimates what happens if retrieval hits are always treated as enough evidence.",
+        "",
+        markdown_table(
+            evidence_gate_rows,
+            [
+                "experiment",
+                "citation_correct_rate",
+                "false_refusal_rate",
+                "refusal_accuracy",
+                "unanswerable_refusal_rate",
+            ],
+        ),
+        "",
         "## Notes",
         "",
         "- Retrieval ablation compares sparse, dense, hybrid fusion, and hybrid plus reranking.",
         "- Reranker blend-weight ablation checks how strongly to trust the Qwen yes/no reranker score relative to the original hybrid rank prior.",
         "- Generation ablation compares evidence-extractive answering with the cached local-LLM generation evaluation when available.",
-        "- Evidence sufficiency remains enabled in all generation rows, because it is part of the safety-critical RAG answer path.",
+        "- Evidence gate ablation shows why refusal handling is safety-critical for unanswerable questions.",
     ]
     out.write_text("\n".join(lines) + "\n", encoding="utf-8")
     return out
@@ -338,6 +411,7 @@ def main() -> None:
         health.raise_for_status()
         retrieval_rows = evaluate_retrieval(client, api_base, cases, args.split, RETRIEVAL_MODES)
         reranker_weight_rows = evaluate_reranker_weights(client, api_base, cases, args.split, RERANKER_WEIGHTS)
+        evidence_gate_rows = evaluate_evidence_gate(client, api_base, cases, args.split)
         generation_rows = [
             evaluate_generation(
                 client,
@@ -368,13 +442,16 @@ def main() -> None:
 
     retrieval_path = out_dir / f"{args.split}_ablation_retrieval.csv"
     reranker_weight_path = out_dir / f"{args.split}_ablation_reranker_weights.csv"
+    evidence_gate_path = out_dir / f"{args.split}_ablation_evidence_gate.csv"
     generation_path = out_dir / f"{args.split}_ablation_generation.csv"
     write_csv(retrieval_path, retrieval_rows)
     write_csv(reranker_weight_path, reranker_weight_rows)
+    write_csv(evidence_gate_path, evidence_gate_rows)
     write_csv(generation_path, generation_rows)
-    report_path = write_report(retrieval_rows, generation_rows, reranker_weight_rows)
+    report_path = write_report(retrieval_rows, generation_rows, reranker_weight_rows, evidence_gate_rows)
     print(retrieval_path)
     print(reranker_weight_path)
+    print(evidence_gate_path)
     print(generation_path)
     print(report_path)
 

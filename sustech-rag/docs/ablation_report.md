@@ -30,10 +30,18 @@ The Qwen reranker score is blended with the original hybrid rank prior. This abl
 | generation_hybrid_rerank_extractive | False | 0.917 | 0.000 | 1.000 | 1.000 |
 | generation_hybrid_rerank_llm_cached | True | 0.917 | 0.000 | 1.000 | 1.000 |
 
+## Evidence Gate Ablation
+
+This ablation compares the normal answer path with a simulated force-answer path that bypasses evidence sufficiency. The force-answer row is intentionally not a production mode; it estimates what happens if retrieval hits are always treated as enough evidence.
+
+| experiment | citation_correct_rate | false_refusal_rate | refusal_accuracy | unanswerable_refusal_rate |
+| --- | --- | --- | --- | --- |
+| evidence_gate_on_extractive | 0.917 | 0.000 | 1.000 | 1.000 |
+| force_answer_no_gate | 0.917 | 0.000 | 0.923 | 0.000 |
+
 ## Notes
 
 - Retrieval ablation compares sparse, dense, hybrid fusion, and hybrid plus reranking.
 - Reranker blend-weight ablation checks how strongly to trust the Qwen yes/no reranker score relative to the original hybrid rank prior.
-- In this corpus, increasing Qwen reranker weight slightly improves chunk-level hit rate at 0.5 and 0.75, but it lowers MRR. A full Qwen-only score reaches the best doc_hit@10 but the worst MRR, so the production system keeps reranking conservative rather than over-trusting the small reranker.
 - Generation ablation compares evidence-extractive answering with the cached local-LLM generation evaluation when available.
-- Evidence sufficiency remains enabled in all generation rows, because it is part of the safety-critical RAG answer path.
+- Evidence gate ablation shows why refusal handling is safety-critical for unanswerable questions.
